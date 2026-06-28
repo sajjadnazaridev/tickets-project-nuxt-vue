@@ -1,75 +1,142 @@
-# Nuxt Minimal Starter
+# Ticket Support Panel — IranPart Frontend Test
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+پروژه‌ی تست فنی فرانت‌اند، پیاده‌سازی صفحه‌ی «تیکت‌های پشتیبانی» با Nuxt 3 و Tailwind CSS v4.
 
-## Setup
+---
 
-Make sure to install dependencies:
+## نصب و اجرا
 
 ```bash
-# npm
+# نصب وابستگی‌ها
 npm install
 
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
-```
-
-## Development Server
-
-Start the development server on `http://localhost:3000`:
-
-```bash
-# npm
+# اجرا در محیط development
 npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
 ```
 
-## Production
+پروژه روی `http://localhost:3000` بالا میاد.
 
-Build the application for production:
+**نسخه‌های مورد نیاز:**
 
-```bash
-# npm
-npm run build
+- Node.js: `v18+`
+- Nuxt: `v3.x`
+- Package Manager: `npm`
 
-# pnpm
-pnpm build
+---
 
-# yarn
-yarn build
+## ساختار پروژه
 
-# bun
-bun run build
+```
+app/
+├── assets/
+│   ├── css/
+│   │   └── main.css          # تنظیمات Tailwind و فونت‌ها
+│   └── fonts/
+│       ├── inter/            # فونت Inter برای اعداد و متن لاتین
+│       └── payda/            # فونت Peyda برای متن فارسی
+│
+├── components/
+│   ├── shared/
+│   │   └── SearchInput.vue   # کامپوننت جستجو با debounce
+│   └── tickets/
+│       ├── TicketTable.vue       # جدول اصلی نمایش تیکت‌ها
+│       ├── TicketStatusBadge.vue # badge وضعیت (reusable)
+│       ├── TicketStatusTab.vue   # تب‌های فیلتر وضعیت
+│       └── TicketPagination.vue  # پیجینیشن
+│
+├── composables/
+│   └── useTicket.ts          # تمام logic مربوط به تیکت‌ها
+│
+├── constants/
+│   └── ticket.ts             # mapping وضعیت‌ها و label‌ها
+│
+├── layouts/
+│   ├── TheAppLayout.vue      # layout اصلی
+│   ├── TheHeader.vue         # هدر
+│   └── TheFooter.vue         # فوتر
+│
+├── pages/
+│   ├── index.vue             # صفحه‌ی اصلی
+│   └── tickets/
+│       └── index.vue         # صفحه‌ی تیکت‌ها
+│
+├── services/
+│   ├── api.ts                # instance اصلی axios
+│   └── ticket.service.ts     # سرویس تیکت‌ها
+│
+└── types/
+    └── tickets/
+        └── ticket.type.ts    # تمام typeها و interfaceها
 ```
 
-Locally preview production build:
+---
 
-```bash
-# npm
-npm run preview
+## API و نحوه‌ی فراخوانی
 
-# pnpm
-pnpm preview
+**Base URL:** `http://api.fixent.ir/api`
 
-# yarn
-yarn preview
+**Endpoint:** `GET /Ticket/user-tickets`
 
-# bun
-bun run preview
+**پارامترها:**
+
+| پارامتر | نوع | توضیح |
+|---|---|---|
+| `Page` | number | شماره صفحه (پیش‌فرض: ۱) |
+| `PerPage` | number | تعداد آیتم در هر صفحه (پیش‌فرض: ۱۰) |
+| `Search` | string (optional) | جستجو در تیکت‌ها |
+| `Status` | number (optional) | فیلتر وضعیت: 9، 10، 11، 12 |
+
+**جریان فراخوانی API:**
+
+```
+pages/tickets/index.vue
+    └── useTicket.ts (composable)
+            └── ticket.service.ts (service)
+                    └── api.ts (axios instance)
+                            └── http://api.fixent.ir/api/Ticket/user-tickets
 ```
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+هیچ درخواست مستقیم API‌ای داخل کامپوننت‌ها وجود نداره. همه چیز از طریق service و composable مدیریت میشه.
+
+---
+
+## تصمیمات فنی
+
+**چرا Axios به جای $fetch؟**
+
+از `axios` برای مدیریت درخواست‌ها استفاده شده، چون interceptor نوشتن باهاش راحت‌تره و response transformation رو یه جا مدیریت میکنه. interceptor به شکلی تنظیم شده که فقط `data.data` از response برگردونه و کامپوننت‌ها با raw response سروکار نداشته باشن.
+
+**چرا composable به جای Pinia؟**
+
+داده‌های تیکت‌ها state جهانی نیستن و فقط در یه صفحه استفاده میشن، پس یه `useTicket` composable کافیه و overhead اضافه‌ی Pinia رو نداریم.
+
+**Debounce روی Search**
+
+فیلد جستجو با debounce پیاده‌سازی شده تا به ازای هر کاراکتر درخواست نزنه و فشار روی API کاهش پیدا کنه.
+
+**فونت‌ها داخل assets**
+
+فونت‌های Inter و Peyda داخل `assets/fonts` قرار گرفتن (نه `public`) تا Vite بتونه hash‌گذاری و cache busting رو به صورت خودکار انجام بده.
+
+**Mapping وضعیت‌ها**
+
+وضعیت‌های تیکت (9، 10، 11، 12) در یه constant جداگانه (`constants/ticket.ts`) به label و رنگ map شدن. اینطوری اگه وضعیت جدیدی اضافه بشه، فقط یه جا تغییر میده.
+
+**TypeScript**
+
+تمام typeها و interfaceها داخل `types/tickets/ticket.type.ts` تعریف شدن:
+- `Ticket`
+- `TicketStatus`
+- `PaginationMeta`
+- `TicketsResponse`
+- `GetTicketsParams`
+
+---
+
+## اگه وقت بیشتری داشتم...
+
+- **Query String Sync:** وضعیت صفحه، جستجو و فیلتر رو با URL sync میکردم تا کاربر بتونه لینک صفحه رو share کنه یا با دکمه back مرورگر به همون state برگرده.
+- **Infinite Scroll:** به جای یا کنار pagination، یه گزینه‌ی infinite scroll هم اضافه میکردم برای تجربه‌ی بهتر موبایل.
+- **Cache:** نتایج جستجو و صفحات قبلی رو cache میکردم تا دوباره درخواست نزنه.
+- **Accessibility:** focus management روی جدول و keyboard navigation رو بهتر میکردم.
+- **futurebase folder structure in nuxt:** پروژه رو بر اساس معماری فیچربیس پیاده سازی میکردم چون مناسب پنل هست و انعطاف بالا در توسعه و مدیریت پروژه های پیچیده داره
